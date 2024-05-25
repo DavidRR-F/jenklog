@@ -1,13 +1,5 @@
 package jenkins
 
-const (
-	SUCCESS   = "SUCCESS"
-	FAILURE   = "FAILURE"
-	ABORTED   = "ABORTED"
-	UNSTABLE  = "UNSTABLE"
-	NOT_BUILT = "NOT_BUILT"
-)
-
 type Run struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
@@ -44,8 +36,4 @@ func (r *Run) GetStagesByStatus(status string) []Stage {
 		}
 	}
 	return filteredStages
-}
-
-func (r *Run) GetBuildLog(stage string) {
-
 }
