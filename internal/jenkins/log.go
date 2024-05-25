@@ -11,6 +11,8 @@ const (
 )
 
 type Log struct {
+	id    string
+	stage string
 	bytes []byte
 }
 
@@ -28,10 +30,11 @@ func (l *Log) ParseByStage(stage string) error {
 	}
 	endIndex += startIndex
 
+	l.stage = stage
 	l.bytes = l.bytes[startIndex:endIndex]
 	return nil
 }
 
 func (l *Log) Print() {
-	fmt.Println(string(l.bytes))
+	fmt.Printf("\nID: %s\nStage: %s\n%s", l.id, l.stage, string(l.bytes))
 }

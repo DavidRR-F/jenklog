@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -13,27 +14,9 @@ import (
 	"github.com/DavidRR-F/jenklog/internal/jenkins"
 )
 
-const (
-	SUCCESS   = "SUCCESS"
-	FAILURE   = "FAILURE"
-	ABORTED   = "ABORTED"
-	UNSTABLE  = "UNSTABLE"
-	NOT_BUILT = "NOT_BUILT"
-)
-
-var statusMap = map[string]string{
-	"success":  SUCCESS,
-	"failure":  FAILURE,
-	"aborted":  ABORTED,
-	"unstable": UNSTABLE,
-	"notbuilt": NOT_BUILT,
-}
-
-// jobCmd represents the job command
 var jobCmd = &cobra.Command{
-	Use:   "job",
-	Short: "A brief description of your command",
-	Long:  `A longer description`,
+	Use:   "job [jobName]",
+	Short: "Query jenkins job logs",
 	Args:  cobra.ExactArgs(1),
 	Run:   getJobLogs,
 }
@@ -42,66 +25,67 @@ func getJobLogs(cmd *cobra.Command, args []string) {
 	job := args[0]
 	stage, _ := cmd.Flags().GetString("stage")
 	build, _ := cmd.Flags().GetString("build")
-	count, _ := cmd.Flags().GetInt("count")
-	filter, _ := cmd.Flags().GetString("status-filter")
+	count, _ := cmd.Flags().GetInt("prev-count")
+	filter, _ := cmd.Flags().GetString("filter-status")
 
-	//valifate filter
+	if !jenkins.IsValidBuildOption(build) {
+		fmt.Println("Not a valid build option")
+		os.Exit(1)
+	}
 
 	if count < 1 {
 		if filter != "" {
-			fmt.Println("count must be greater than 0 to filer by status")
+			fmt.Println("must select multiple builds to fitler by status")
 			os.Exit(1)
 		}
 		log, err := getJobLog(job, stage, build)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
 		}
 		log.Print()
 	} else {
-		//multi logs
 		runs, err := getJobRuns(job, build, filter, count)
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
 		}
-		logChannel := make(chan jenkins.Log, len(runs))
-		errChannel := make(chan error, len(runs))
+		logs := make([]jenkins.Log, len(runs))
 		var wg sync.WaitGroup
-		for _, run := range runs {
+		for i, run := range runs {
 			wg.Add(1)
-			go func(job, stage string, run jenkins.Run) {
+			go func(job, stage string, run jenkins.Run, i int) {
 				defer wg.Done()
 				log, err := getJobLog(job, stage, run.ID)
 				if err != nil {
-					errChannel <- err
+					fmt.Println(err)
+					return
 				}
-				logChannel <- log
-			}(job, stage, run)
+				logs[i] = log
+			}(job, stage, run, i)
 		}
-		go func() {
-			wg.Wait()
-			close(logChannel)
-			close(errChannel)
-		}()
+		wg.Wait()
 
-		for log := range logChannel {
+		for _, log := range logs {
 			log.Print()
-		}
-		for err := range errChannel {
-			fmt.Println(err)
 		}
 	}
 }
 
 func getJobRuns(job, build, filter string, count int) ([]jenkins.Run, error) {
+	if _, err := strconv.Atoi(build); err != nil && build != jenkins.LAST_BUILD {
+		buildInfo, err := jenkins.GetJenkinsJobInfo(job, build)
+		if err != nil {
+			return []jenkins.Run{}, err
+		}
+		build = buildInfo.ID
+	}
+
 	runs, err := jenkins.GetJenkinsJobRuns(job)
 
 	if err != nil {
 		return []jenkins.Run{}, err
 	}
 
-	if build == "last" {
+	if build == jenkins.LAST_BUILD {
 		runs = runs[:count+1]
 	} else {
 		runs, err = sliceRuns(runs, build, count)
@@ -109,20 +93,26 @@ func getJobRuns(job, build, filter string, count int) ([]jenkins.Run, error) {
 			return []jenkins.Run{}, err
 		}
 	}
+
 	if filter != "" {
-		filter, valid := statusMap[filter]
-		if !valid {
-			return []jenkins.Run{}, fmt.Errorf("invalid status filter: %s", filter)
-		}
+		return runs, nil
+	}
+
+	if validFilter, valid := jenkins.IsValidFilterOption(filter); valid {
 		var filteredRuns []jenkins.Run
 		for _, run := range runs {
-			if run.Status == filter {
+			if run.Status == validFilter {
 				filteredRuns = append(filteredRuns, run)
 			}
 		}
+
+		if len(filteredRuns) == 0 {
+			return []jenkins.Run{}, fmt.Errorf("no runs found with status %s in this range", filter)
+		}
 		return filteredRuns, nil
+	} else {
+		return []jenkins.Run{}, fmt.Errorf("invalid status filter: %s", filter)
 	}
-	return runs, nil
 }
 
 func sliceRuns(runs []jenkins.Run, build string, count int) ([]jenkins.Run, error) {
@@ -163,10 +153,10 @@ func getJobLog(job, stage, build string) (jenkins.Log, error) {
 }
 
 func init() {
-	jobCmd.Flags().StringP("build", "b", "last", "Job Build Number")
-	jobCmd.Flags().StringP("status-filter", "f", "", "Filter Job Builds By Status")
-	jobCmd.Flags().StringP("stage", "s", "", "Job Build Stage Name")
-	jobCmd.Flags().IntP("count", "c", 0, "Job Build Log")
+	jobCmd.Flags().StringP("build", "b", "lastBuild", "Job build number or (lastBuild, lastFailedBuild, lastCompletedBuild, lastStableBuild, lastUnstableBuild)")
+	jobCmd.Flags().StringP("filter-status", "f", "", "Filter job builds by status (success, failure, aborted, unstable, notbuilt)")
+	jobCmd.Flags().StringP("stage", "s", "", "Job build stage name")
+	jobCmd.Flags().IntP("prev-count", "p", 0, "Number of logs to get preceding selected log")
 
 	rootCmd.AddCommand(jobCmd)
 }

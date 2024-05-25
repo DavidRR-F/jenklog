@@ -5,8 +5,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/DavidRR-F/jenklog/internal/config"
+)
+
+const (
+	JOB_RUNS = "/job/%s/wfapi/runs"
+	JOB_LOGS = "/job/%s/%s/consoleText"
+	JOB_INFO = "/job/%s/%s/api/json"
 )
 
 const (
@@ -18,9 +25,47 @@ const (
 )
 
 const (
-	JOB_RUNS = "/job/%s/wfapi/runs"
-	JOB_LOGS = "/job/%s/%s/consoleText"
+	SUCCESS   = "SUCCESS"
+	FAILURE   = "FAILURE"
+	ABORTED   = "ABORTED"
+	UNSTABLE  = "UNSTABLE"
+	NOT_BUILT = "NOT_BUILT"
 )
+
+var validBuildOptions = []string{
+	LAST_BUILD,
+	LAST_FAILED_BUILD,
+	LAST_SUCCESSFUL_BUILD,
+	LAST_STABLE_BUILD,
+	LAST_UNSTABLE_BUILD,
+}
+
+var validStatusOptions = map[string]string{
+	"success":  SUCCESS,
+	"failure":  FAILURE,
+	"aborted":  ABORTED,
+	"unstable": UNSTABLE,
+	"notbuilt": NOT_BUILT,
+}
+
+func IsValidFilterOption(option string) (string, bool) {
+	status, valid := validStatusOptions[option]
+	return status, valid
+}
+
+func IsValidBuildOption(option string) bool {
+	for _, validOption := range validBuildOptions {
+		if option == validOption {
+			return true
+		}
+	}
+
+	if _, err := strconv.Atoi(option); err == nil {
+		return true
+	}
+
+	return false
+}
 
 func GetJenkinsJobRuns(job string) ([]Run, error) {
 	config, err := config.GetConfig()
@@ -47,14 +92,34 @@ func GetJenkinsJobLog(job, build string) (Log, error) {
 		return Log{}, err
 	}
 
-	endpoint := fmt.Sprintf(JOB_LOGS, job, LAST_BUILD)
+	endpoint := fmt.Sprintf(JOB_LOGS, job, build)
 	body, err := queryJenkins(config, endpoint)
 
 	if err != nil {
 		return Log{}, err
 	}
 
-	return Log{bytes: body}, nil
+	return Log{id: build, stage: "All", bytes: body}, nil
+}
+
+func GetJenkinsJobInfo(job, build string) (BuildInfo, error) {
+	config, err := config.GetConfig()
+	if err != nil {
+		return BuildInfo{}, err
+	}
+	endpoint := fmt.Sprintf(JOB_INFO, job, build)
+	body, err := queryJenkins(config, endpoint)
+
+	if err != nil {
+		return BuildInfo{}, err
+	}
+
+	var buildInfo BuildInfo
+	if err := json.Unmarshal(body, &buildInfo); err != nil {
+		return BuildInfo{}, fmt.Errorf("error unmarshalling response body: %v", err)
+	}
+	return buildInfo, nil
+
 }
 
 func queryJenkins(config *config.Config, endpoint string) ([]byte, error) {
