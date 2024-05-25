@@ -14,17 +14,17 @@ type Log struct {
 	bytes []byte
 }
 
-func (l *Log) parseByStage(stagePtr *string) error {
-	startMarker := []byte(fmt.Sprintf(PIPELINE_START, *stagePtr))
+func (l *Log) ParseByStage(stage string) error {
+	startMarker := []byte(fmt.Sprintf(PIPELINE_START, stage))
 	startIndex := bytes.Index(l.bytes, startMarker)
 	if startIndex == -1 {
-		return fmt.Errorf("stage %s not found", *stagePtr)
+		return fmt.Errorf("stage %s not found", stage)
 	}
 	startIndex += len(startMarker)
 
 	endIndex := bytes.Index(l.bytes[startIndex:], []byte(PIPELINE_END))
 	if endIndex == -1 {
-		return fmt.Errorf("stage %s not found", *stagePtr)
+		return fmt.Errorf("stage %s not found", stage)
 	}
 	endIndex += startIndex
 

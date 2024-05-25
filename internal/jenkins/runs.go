@@ -16,6 +16,7 @@ type Run struct {
 	EndTime   int64   `json:"endTimeMillis"`
 	Duration  int64   `json:"durationMillis"`
 	Stages    []Stage `json:"stages"`
+	Log       Log
 }
 
 type Stage struct {
@@ -43,4 +44,8 @@ func (r *Run) GetStagesByStatus(status string) []Stage {
 		}
 	}
 	return filteredStages
+}
+
+func (r *Run) GetBuildLog(stage string) {
+
 }

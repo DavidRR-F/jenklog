@@ -1,7 +1,6 @@
 package jenkins
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,7 +47,7 @@ func GetJenkinsJobLog(job, build string) (Log, error) {
 		return Log{}, err
 	}
 
-	endpoint := fmt.Sprintf(JOB_LOGS, job, build)
+	endpoint := fmt.Sprintf(JOB_LOGS, job, LAST_BUILD)
 	body, err := queryJenkins(config, endpoint)
 
 	if err != nil {
