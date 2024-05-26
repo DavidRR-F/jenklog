@@ -94,7 +94,7 @@ func getJobRuns(job, build, filter string, count int) ([]jenkins.Run, error) {
 		}
 	}
 
-	if filter != "" {
+	if filter == "" {
 		return runs, nil
 	}
 
