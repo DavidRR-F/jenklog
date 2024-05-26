@@ -86,7 +86,9 @@ func getJobRuns(job, build, filter string, count int) ([]jenkins.Run, error) {
 	}
 
 	if build == jenkins.LAST_BUILD {
-		runs = runs[:count+1]
+		if count+1 < len(runs) {
+			runs = runs[:count+1]
+		}
 	} else {
 		runs, err = sliceRuns(runs, build, count)
 		if err != nil {
