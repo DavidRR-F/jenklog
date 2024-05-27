@@ -67,7 +67,7 @@ func IsValidBuildOption(option string) bool {
 	return false
 }
 
-func GetJenkinsJobRuns(job string) ([]Run, error) {
+func GetJenkinsJobRuns(job string) (Runs, error) {
 	config, err := config.GetConfig()
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func GetJenkinsJobRuns(job string) ([]Run, error) {
 		return nil, err
 	}
 
-	var runs []Run
+	var runs Runs
 	if err := json.Unmarshal(body, &runs); err != nil {
 		return nil, fmt.Errorf("error unmarshalling response body: %v", err)
 	}

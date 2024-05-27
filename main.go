@@ -1,6 +1,5 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
+2024 David Rose-Franklin <david.franklin.dev@gmail.ocm>
 */
 package main
 

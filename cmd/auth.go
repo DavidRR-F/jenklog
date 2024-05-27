@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
+2024 David Rose-Franklin <david.franklin.dev@gmail.ocm>
 */
 package cmd
 
@@ -15,18 +15,30 @@ var authCmd = &cobra.Command{
 	Use:   "auth [arg]",
 	Short: "Initialize authentication credentials",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		url := args[0]
-		username, _ := cmd.Flags().GetString("username")
-		token, _ := cmd.Flags().GetString("token")
+	Run:   executeAuth,
+}
 
-		if err := config.SaveConfig(username, token, url); err != nil {
-			fmt.Printf("Error saving config: %v\n", err)
-			os.Exit(1)
-		}
+func executeAuth(cmd *cobra.Command, args []string) {
+	url := args[0]
 
-		fmt.Println("\nConfiguration saved successfully in ~/.jenklog-config")
-	},
+	user, err := cmd.Flags().GetString("user")
+	if err != nil {
+		fmt.Printf("Error getting user flag: %v\n", err)
+		os.Exit(1)
+	}
+
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		fmt.Printf("Error getting token flag: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := config.SaveConfig(user, token, url); err != nil {
+		fmt.Printf("Error saving config: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("\nConfiguration saved successfully in ~/.jenklog-config")
 }
 
 func init() {

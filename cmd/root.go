@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 
   Example:
 
-  jenklog job <job-name> --build last --count 0 --stage Deploy --filter-status success
+  jenklog job <job-name> --build last --stage Deploy --prev-count 5 --filter-status success
   `,
 }
 

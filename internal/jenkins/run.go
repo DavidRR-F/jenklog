@@ -1,5 +1,7 @@
 package jenkins
 
+import "fmt"
+
 type Run struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
@@ -28,12 +30,38 @@ type Link struct {
 	Href string `json:"href"`
 }
 
-func (r *Run) GetStagesByStatus(status string) []Stage {
-	var filteredStages []Stage
-	for _, stage := range r.Stages {
-		if stage.Status == status {
-			filteredStages = append(filteredStages, stage)
+type Runs []Run
+
+func (r Runs) Filter(status string) (Runs, error) {
+	var filtered Runs
+	for _, run := range r {
+		if run.Status == status {
+			filtered = append(filtered, run)
 		}
 	}
-	return filteredStages
+	if len(filtered) == 0 {
+		return nil, fmt.Errorf("no runs found with status %s in this range", status)
+	}
+	return filtered, nil
+}
+
+func (r Runs) Slice(build string, count int) (Runs, error) {
+	startIndex := -1
+	for i, run := range r {
+		if run.ID == build {
+			startIndex = i
+			break
+		}
+	}
+
+	if startIndex == -1 {
+		return nil, fmt.Errorf("value %s not found in the builds", build)
+	}
+
+	endIndex := startIndex + count + 1
+	if endIndex > len(r) {
+		endIndex = len(r)
+	}
+
+	return r[startIndex:endIndex], nil
 }
