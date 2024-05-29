@@ -42,12 +42,6 @@ func executeJob(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	filter, err := cmd.Flags().GetString("filter-status")
-	if err != nil {
-		fmt.Println("Error getting filter-status flag:", err)
-		os.Exit(1)
-	}
-
 	if !jenkins.IsValidBuildOption(build) {
 		fmt.Println("Not a valid build option")
 		os.Exit(1)
@@ -55,13 +49,13 @@ func executeJob(cmd *cobra.Command, args []string) {
 
 	switch count {
 	case 0:
-		err := handleSingleLogRequest(job, stage, build, filter)
+		err := handleSingleLogRequest(job, stage, build)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	default:
-		err := handleMultiLogRequest(job, stage, build, count, filter)
+		err := handleMultiLogRequest(job, stage, build, count)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -71,17 +65,13 @@ func executeJob(cmd *cobra.Command, args []string) {
 
 func init() {
 	jobCmd.Flags().StringP("build", "b", "lastBuild", "Job build number or (lastBuild, lastFailedBuild, lastCompletedBuild, lastStableBuild, lastUnstableBuild)")
-	jobCmd.Flags().StringP("filter-status", "f", "", "Filter job builds by status (success, failure, aborted, unstable, notbuilt)")
 	jobCmd.Flags().StringP("stage", "s", "", "Job build stage name")
 	jobCmd.Flags().IntP("prev-count", "p", 0, "Number of logs to get preceding selected log")
 
 	rootCmd.AddCommand(jobCmd)
 }
 
-func handleSingleLogRequest(job, stage, build, filter string) error {
-	if filter != "" {
-		return fmt.Errorf("must select multiple builds to fitler by status")
-	}
+func handleSingleLogRequest(job, stage, build string) error {
 	log, err := getJobLog(job, stage, build)
 	if err != nil {
 		return err
@@ -90,16 +80,35 @@ func handleSingleLogRequest(job, stage, build, filter string) error {
 	return nil
 }
 
-func handleMultiLogRequest(job, stage, build string, count int, filter string) error {
-	runs, err := getJobRuns(job, build, filter, count)
+func handleMultiLogRequest(job, stage, build string, count int) error {
+	if _, err := strconv.Atoi(build); err != nil {
+		buildInfo, err := jenkins.GetJenkinsJobInfo(job, build)
+		if err != nil {
+			return err
+		}
+		build = buildInfo.ID
+	}
+
+	buildInt, err := strconv.Atoi(build)
+
 	if err != nil {
 		return err
 	}
-	logs := make([]jenkins.Log, len(runs))
+
+	if buildInt-count < 1 {
+		count = buildInt
+	}
+
+	var ids []string
+	for i := buildInt; i > buildInt-count; i-- {
+		ids = append(ids, strconv.Itoa(i))
+	}
+
+	logs := make([]jenkins.Log, len(ids))
 	var wg sync.WaitGroup
-	for i, run := range runs {
+	for i, id := range ids {
 		wg.Add(1)
-		go getJobLogs(job, stage, run, &wg, &logs[i])
+		go getJobLogs(job, stage, id, &wg, &logs[i])
 	}
 	wg.Wait()
 
@@ -125,49 +134,12 @@ func getJobLog(job, stage, build string) (jenkins.Log, error) {
 	return log, nil
 }
 
-func getJobLogs(job, stage string, run jenkins.Run, wg *sync.WaitGroup, logDest *jenkins.Log) {
+func getJobLogs(job, stage string, id string, wg *sync.WaitGroup, logDest *jenkins.Log) {
 	defer wg.Done()
-	log, err := getJobLog(job, stage, run.ID)
+	log, err := getJobLog(job, stage, id)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	*logDest = log
-}
-
-func getJobRuns(job, build, filter string, count int) (jenkins.Runs, error) {
-	if _, err := strconv.Atoi(build); err != nil && build != jenkins.LAST_BUILD {
-		buildInfo, err := jenkins.GetJenkinsJobInfo(job, build)
-		if err != nil {
-			return jenkins.Runs{}, err
-		}
-		build = buildInfo.ID
-	}
-
-	runs, err := jenkins.GetJenkinsJobRuns(job)
-
-	if err != nil {
-		return jenkins.Runs{}, err
-	}
-
-	if build == jenkins.LAST_BUILD {
-		if count+1 < len(runs) {
-			runs = runs[:count+1]
-		}
-	} else {
-		runs, err = runs.Slice(build, count)
-		if err != nil {
-			return jenkins.Runs{}, err
-		}
-	}
-
-	if filter == "" {
-		return runs, nil
-	}
-
-	if validFilter, valid := jenkins.IsValidFilterOption(filter); valid {
-		return runs.Filter(validFilter)
-	} else {
-		return jenkins.Runs{}, fmt.Errorf("invalid status filter: %s", filter)
-	}
 }

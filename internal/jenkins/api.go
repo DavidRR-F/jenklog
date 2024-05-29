@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	JOB_RUNS = "/job/%s/wfapi/runs"
 	JOB_LOGS = "/job/%s/%s/consoleText"
 	JOB_INFO = "/job/%s/%s/api/json"
 )
@@ -24,33 +23,12 @@ const (
 	LAST_UNSTABLE_BUILD   = "lastUnstableBuild"
 )
 
-const (
-	SUCCESS   = "SUCCESS"
-	FAILURE   = "FAILURE"
-	ABORTED   = "ABORTED"
-	UNSTABLE  = "UNSTABLE"
-	NOT_BUILT = "NOT_BUILT"
-)
-
 var validBuildOptions = []string{
 	LAST_BUILD,
 	LAST_FAILED_BUILD,
 	LAST_SUCCESSFUL_BUILD,
 	LAST_STABLE_BUILD,
 	LAST_UNSTABLE_BUILD,
-}
-
-var validStatusOptions = map[string]string{
-	"success":  SUCCESS,
-	"failure":  FAILURE,
-	"aborted":  ABORTED,
-	"unstable": UNSTABLE,
-	"notbuilt": NOT_BUILT,
-}
-
-func IsValidFilterOption(option string) (string, bool) {
-	status, valid := validStatusOptions[option]
-	return status, valid
 }
 
 func IsValidBuildOption(option string) bool {
@@ -65,25 +43,6 @@ func IsValidBuildOption(option string) bool {
 	}
 
 	return false
-}
-
-func GetJenkinsJobRuns(job string) (Runs, error) {
-	config, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-	endpoint := fmt.Sprintf(JOB_RUNS, job)
-	body, err := queryJenkins(config, endpoint)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var runs Runs
-	if err := json.Unmarshal(body, &runs); err != nil {
-		return nil, fmt.Errorf("error unmarshalling response body: %v", err)
-	}
-	return runs, nil
 }
 
 func GetJenkinsJobLog(job, build string) (Log, error) {

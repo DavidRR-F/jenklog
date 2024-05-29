@@ -42,8 +42,6 @@ jenklog job [jobName] [flags]
 | -b, --build | Job Build Number | no | last |
 | -s, --stage | Specific Pipeline Stage Name to get | no | all |
 | -p, --prev-count | Number of Build Logs to query preceding the specified build | no | 0 |
-| -f, --filter-status | Filter Builds by there build status | no | all |
-
 
 ### Examples
 
@@ -70,10 +68,10 @@ ERROR: NO BAT THIS IS A LINUX AGENT
 
 ```
 
-3. Get Build Log 5-3 and filter by build status success
+3. Get Build Log 5-3
 
 ```bash 
-> jenklog job testy -b 5 -p 2 -s Test -f success 
+> jenklog job testy -b 5 -p 2 -s Test 
 
 ID: 5
 Stage: Test
