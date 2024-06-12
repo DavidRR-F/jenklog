@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	CONFIG_FILE_NAME = ".jenklog-config"
-	CONFIG_FILE_TYPE = "yaml"
+	CONFIG_FILE_NAME = ".env"
+	CONFIG_FILE_TYPE = "env"
 )
 
 type Config struct {
-	Username string `mapstructure:"username"`
-	Token    string `mapstructure:"token"`
-	URL      string `mapstructure:"url"`
+	Username string `mapstructure:"JENKINS_USER_ID"`
+	Token    string `mapstructure:"JENKINS_API_TOKEN"`
+	URL      string `mapstructure:"JENKINS_URL"`
 }
 
 var (
@@ -73,9 +73,9 @@ func SaveConfig(username, token, url string) error {
 		file.Close()
 	}
 
-	viper.Set("username", username)
-	viper.Set("token", token)
-	viper.Set("url", url)
+	viper.Set("JENKINS_USER_ID", username)
+	viper.Set("JENKINS_API_TOKEN", token)
+	viper.Set("JENKINS_URL", url)
 
 	viper.SetConfigFile(configFilePath)
 	viper.SetConfigType(CONFIG_FILE_TYPE)
