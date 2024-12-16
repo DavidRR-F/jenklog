@@ -1,0 +1,41 @@
+
+# Go binary output
+/bin/
+/obj/
+*.exe
+*.exe~
+*.out
+*.test
+
+# Dependency directories
+/vendor/
+
+# Go workspace files
+.go_workspace
+.go_workspace.~lock
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Mac system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Linux system files
+*.swp
+
+# Log files
+*.log
+
+# Coverage reports
+coverage.out
+*.cov
+*.coverage
+
+# Go modules
+go.sum
+go.mod
