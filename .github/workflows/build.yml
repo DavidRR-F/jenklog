@@ -41,4 +41,4 @@ jobs:
             bin/jenklog-darwin-amd64
             bin/jenklog-windows-amd64.exe
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
