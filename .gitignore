@@ -35,7 +35,3 @@ Thumbs.db
 coverage.out
 *.cov
 *.coverage
-
-# Go modules
-go.sum
-go.mod
